@@ -51,7 +51,11 @@ fn convert_dhall_value_to_nu_value(v: &SimpleValue, tag: impl Into<Tag>) -> Valu
             Some(x) => convert_dhall_value_to_nu_value(x, &tag),
             None => UntaggedValue::nothing().into_value(tag),
         },
-        x => unimplemented!("Unsupported dhall case: {:?}", x), // TODO: Implement Union
+        // TODO: Handle the key somehow
+        SimpleValue::Union(_, v) => match v {
+            Some(x) => convert_dhall_value_to_nu_value(x, &tag),
+            None => UntaggedValue::nothing().into_value(tag),
+        },
     }
 }
 
