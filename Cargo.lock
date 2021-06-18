@@ -875,6 +875,7 @@ dependencies = [
 name = "nu_plugin_from_dhall"
 version = "0.1.0"
 dependencies = [
+ "indexmap",
  "nu-errors",
  "nu-plugin",
  "nu-protocol",

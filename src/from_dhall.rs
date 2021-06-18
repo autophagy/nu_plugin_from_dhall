@@ -1,3 +1,4 @@
+use indexmap::indexmap;
 use nu_errors::ShellError;
 use nu_protocol::{ReturnSuccess, ReturnValue, TaggedDictBuilder, UntaggedValue, Value};
 use nu_source::Tag;
@@ -51,11 +52,12 @@ fn convert_dhall_value_to_nu_value(v: &SimpleValue, tag: impl Into<Tag>) -> Valu
             Some(x) => convert_dhall_value_to_nu_value(x, &tag),
             None => UntaggedValue::nothing().into_value(tag),
         },
-        // TODO: Handle the key somehow
-        SimpleValue::Union(_, v) => match v {
+        SimpleValue::Union(k, v) => UntaggedValue::row(indexmap! { k.clone() => match v {
             Some(x) => convert_dhall_value_to_nu_value(x, &tag),
-            None => UntaggedValue::nothing().into_value(tag),
-        },
+            None => UntaggedValue::nothing().into_value(&tag)
+        }
+        })
+        .into_value(tag),
     }
 }
 

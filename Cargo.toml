@@ -16,4 +16,4 @@ nu-protocol = "~0"
 nu-source = "~0"
 nu-value-ext = "~0"
 serde_dhall = "0.10.1"
-
+indexmap = { version = "1.6.1", features = ["serde-1"] }
