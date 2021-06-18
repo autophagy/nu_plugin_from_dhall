@@ -1,6 +1,6 @@
 [package]
 name = "nu_plugin_from_dhall"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Mika Naylor <mail@autophagy.io>"]
 edition = "2018"
 repository = "https://github.com/autophagy/nu_plugin_from_dhall"
