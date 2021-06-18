@@ -74,7 +74,11 @@ pub fn from_dhall_string_to_value(
         )
     })?;
 
-    Ok(vec![ReturnSuccess::value(convert_dhall_value_to_nu_value(
-        &v, tag,
-    ))])
+    match convert_dhall_value_to_nu_value(&v, tag) {
+        Value {
+            value: UntaggedValue::Table(list),
+            ..
+        } => Ok(list.into_iter().map(ReturnSuccess::value).collect()),
+        x => Ok(vec![ReturnSuccess::value(x)]),
+    }
 }
