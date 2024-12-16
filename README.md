@@ -10,6 +10,8 @@ data types.
 
 ```bash
 cargo install nu_plugin_from_dhall
+plugin add ~/.cargo/bin/nu_plugin_from_dhall
+plugin use ~/.cargo/bin/nu_plugin_from_dhall
 ```
 
 # Usage
@@ -18,7 +20,7 @@ Given a Dhall file:
 
 ```bash
 > cat example.dhall
-let AccountType = < Guest | User | Admin >
+let AccountType = < Guest : Text | User : Natural | Admin : Bool >
 
 let Person =
       { name : Text
@@ -31,7 +33,7 @@ let alice
     : Person
     = { name = "Alice"
       , age = 24
-      , accountType = AccountType.Admin
+      , accountType = AccountType.Admin False
       , nickname = Some "Cool Alice"
       }
 
@@ -39,7 +41,7 @@ let bob
     : Person
     = { name = "Bob"
       , age = 49
-      , accountType = AccountType.User
+      , accountType = AccountType.User 777
       , nickname = None Text
       }
 
@@ -47,7 +49,7 @@ let carlo
     : Person
     = { name = "Carlo"
       , age = 20
-      , accountType = AccountType.Guest
+      , accountType = AccountType.Guest "Only around for an hour"
       , nickname = Some "Cooler Carlo"
       }
 
@@ -59,19 +61,38 @@ pipe:
 
 ```bash
 > open example.dhall
-───┬─────────────┬─────┬───────┬──────────────
- # │ accountType │ age │ name  │   nickname
-───┼─────────────┼─────┼───────┼──────────────
- 0 │ [row Admin] │  24 │ Alice │ Cool Alice
- 1 │ [row User]  │  49 │ Bob   │
- 2 │ [row Guest] │  20 │ Carlo │ Cooler Carlo
-───┴─────────────┴─────┴───────┴──────────────
+╭───┬─────────────────────────────────────┬─────┬───────┬──────────────╮
+│ # │             accountType             │ age │ name  │   nickname   │
+├───┼─────────────────────────────────────┼─────┼───────┼──────────────┤
+│ 0 │ ╭───────┬───────╮                   │  24 │ Alice │ Cool Alice   │
+│   │ │ Admin │ false │                   │     │       │              │
+│   │ ╰───────┴───────╯                   │     │       │              │
+│ 1 │ ╭──────┬─────╮                      │  49 │ Bob   │              │
+│   │ │ User │ 777 │                      │     │       │              │
+│   │ ╰──────┴─────╯                      │     │       │              │
+│ 2 │ ╭───────┬─────────────────────────╮ │  20 │ Carlo │ Cooler Carlo │
+│   │ │ Guest │ Only around for an hour │ │     │       │              │
+│   │ ╰───────┴─────────────────────────╯ │     │       │              │
+╰───┴─────────────────────────────────────┴─────┴───────┴──────────────╯
 
 > open example.dhall | where age > 20 | get name
-───┬───────
- 0 │ Alice
- 1 │ Bob
-───┴───────
+╭───┬───────╮
+│ 0 │ Alice │
+│ 1 │ Bob   │
+╰───┴───────╯
+```
+
+Alternatively, you can also use `from dhall`:
+
+```bash
+> open example.dhall --raw | from dhall | select name nickname
+╭───┬───────┬──────────────╮
+│ # │ name  │   nickname   │
+├───┼───────┼──────────────┤
+│ 0 │ Alice │ Cool Alice   │
+│ 1 │ Bob   │              │
+│ 2 │ Carlo │ Cooler Carlo │
+╰───┴───────┴──────────────╯
 ```
 
 [Nushell]: https://www.nushell.sh
