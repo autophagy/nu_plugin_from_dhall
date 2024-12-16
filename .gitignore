@@ -11,3 +11,5 @@
 # Added by cargo
 
 /target
+.direnv/
+result

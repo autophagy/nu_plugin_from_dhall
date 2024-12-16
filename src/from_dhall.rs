@@ -1,84 +1,47 @@
-use indexmap::indexmap;
-use nu_errors::ShellError;
-use nu_protocol::{ReturnSuccess, ReturnValue, TaggedDictBuilder, UntaggedValue, Value};
-use nu_source::Tag;
-
+use nu_protocol::{LabeledError, Record, Span, Value};
 use serde_dhall::{NumKind, SimpleValue};
 
-pub struct FromDhall {
-    pub state: String,
-    pub name_tag: Tag,
-}
-
-impl FromDhall {
-    pub fn new() -> Self {
-        Self {
-            state: String::new(),
-            name_tag: Tag::unknown(),
-        }
-    }
-}
-
-fn convert_dhall_value_to_nu_value(v: &SimpleValue, tag: impl Into<Tag>) -> Value {
-    let tag = tag.into();
-    let span = tag.span;
+fn convert_dhall_to_nu(v: &SimpleValue, span: Span) -> Value {
     match v {
         SimpleValue::Num(n) => match n {
-            NumKind::Bool(b) => UntaggedValue::boolean(*b).into_value(tag),
-            NumKind::Natural(n) => UntaggedValue::int(*n as i64).into_value(tag),
-            NumKind::Integer(i) => UntaggedValue::int(*i).into_value(tag),
-            NumKind::Double(d) => {
-                UntaggedValue::decimal_from_float((*d).into(), span).into_value(tag)
-            }
+            NumKind::Bool(b) => Value::bool(*b, span),
+            NumKind::Natural(n) => Value::int(*n as i64, span),
+            NumKind::Integer(i) => Value::int(*i, span),
+            NumKind::Double(d) => Value::float((*d).into(), span),
         },
-        SimpleValue::Text(t) => UntaggedValue::string(t).into_value(tag),
+        SimpleValue::Text(t) => Value::string(t, span),
         SimpleValue::Record(r) => {
-            let mut collected = TaggedDictBuilder::new(&tag);
+            let mut record = Record::new();
 
             for (k, v) in r.iter() {
-                collected.insert_value(k.clone(), convert_dhall_value_to_nu_value(v, &tag));
+                record.insert(k, convert_dhall_to_nu(v, span));
             }
 
-            collected.into_value()
+            Value::record(record, span)
         }
         SimpleValue::List(l) => {
-            let r: Vec<Value> = l
-                .iter()
-                .map(|x| convert_dhall_value_to_nu_value(x, &tag))
-                .collect();
-            UntaggedValue::Table(r).into_value(tag)
+            let r: Vec<Value> = l.iter().map(|x| convert_dhall_to_nu(x, span)).collect();
+            Value::list(r, span)
         }
         SimpleValue::Optional(o) => match o {
-            Some(x) => convert_dhall_value_to_nu_value(x, &tag),
-            None => UntaggedValue::nothing().into_value(tag),
+            Some(x) => convert_dhall_to_nu(x, span),
+            None => Value::nothing(span),
         },
-        SimpleValue::Union(k, v) => UntaggedValue::row(indexmap! { k.clone() => match v {
-            Some(x) => convert_dhall_value_to_nu_value(x, &tag),
-            None => UntaggedValue::nothing().into_value(&tag)
+        SimpleValue::Union(k, v) => {
+            let x = match v {
+                Some(x) => convert_dhall_to_nu(x, span),
+                None => Value::nothing(span),
+            };
+            let mut record = Record::new();
+            record.insert(k, x);
+            Value::record(record, span)
         }
-        })
-        .into_value(tag),
     }
 }
 
-pub fn from_dhall_string_to_value(
-    s: String,
-    tag: impl Into<Tag>,
-) -> Result<Vec<ReturnValue>, ShellError> {
-    let tag = tag.into();
+pub fn from_dhall_string(s: String, span: Span) -> Result<Value, Box<LabeledError>> {
     let v: serde_dhall::SimpleValue = serde_dhall::from_str(&s).parse().map_err(|x| {
-        ShellError::labeled_error(
-            format!("Could not load dhall: {}", x),
-            "could not load dhall from text",
-            &tag,
-        )
+        LabeledError::new(format!("Could not load dhall: {}", x)).with_label("oh no", span)
     })?;
-
-    match convert_dhall_value_to_nu_value(&v, tag) {
-        Value {
-            value: UntaggedValue::Table(list),
-            ..
-        } => Ok(list.into_iter().map(ReturnSuccess::value).collect()),
-        x => Ok(vec![ReturnSuccess::value(x)]),
-    }
+    Ok(convert_dhall_to_nu(&v, span))
 }

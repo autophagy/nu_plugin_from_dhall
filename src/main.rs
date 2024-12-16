@@ -1,6 +1,8 @@
-use nu_plugin::serve_plugin;
-use nu_plugin_from_dhall::FromDhall;
+mod from_dhall;
+mod plugin;
+
+use nu_plugin::{serve_plugin, MsgPackSerializer};
 
 fn main() {
-    serve_plugin(&mut FromDhall::new());
+    serve_plugin(&crate::plugin::DhallPlugin, MsgPackSerializer {})
 }
